@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "records": {
+    "shape:legacy": {
+      "id": "shape:legacy",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 20,
+      "y": 30,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "parentId": "page:page",
+      "index": "a1",
+      "meta": {},
+      "props": {
+        "w": 100,
+        "h": 100,
+        "geo": "rectangle",
+        "dash": "draw",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "color": "black",
+        "labelColor": "black",
+        "fill": "none",
+        "size": "m",
+        "font": "draw",
+        "align": "middle",
+        "verticalAlign": "middle",
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

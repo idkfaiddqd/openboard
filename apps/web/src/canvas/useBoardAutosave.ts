@@ -7,6 +7,7 @@ export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 export interface UseBoardAutosaveOptions {
   boardId: BoardId;
   controller: BoardCanvasController | null;
+  initialDocument?: BoardDocument;
   debounceMs?: number;
   onSaveSuccess?: () => void;
   onSaveError?: (error: Error) => void;
@@ -27,6 +28,7 @@ export interface UseBoardAutosaveResult {
 export function useBoardAutosave({
   boardId,
   controller,
+  initialDocument,
   debounceMs = 1000,
   onSaveSuccess,
   onSaveError,
@@ -39,6 +41,8 @@ export function useBoardAutosave({
   const hasPendingChangesRef = useRef(false);
   const controllerRef = useRef(controller);
   controllerRef.current = controller;
+  const initialDocumentRef = useRef(initialDocument);
+  initialDocumentRef.current = initialDocument;
 
   const saveDocument = useCallback(
     async (doc: BoardDocument): Promise<boolean> => {
@@ -128,7 +132,7 @@ export function useBoardAutosave({
     setErrorMessage(null);
     hasPendingChangesRef.current = false;
 
-    const unsubscribe = controller.subscribeToDocumentChanges(() => {
+    const markChanged = () => {
       hasPendingChangesRef.current = true;
       setSaveStatus('unsaved');
 
@@ -147,7 +151,22 @@ export function useBoardAutosave({
           }
         }
       }, debounceMs);
-    });
+    };
+    const unsubscribe = controller.subscribeToDocumentChanges(markChanged);
+
+    // Layout effects can grow UML shapes before this subscription is installed.
+    // Compare with the loaded document so that initial fitting is persisted.
+    const initialRecords = initialDocumentRef.current?.records;
+    if (initialRecords) {
+      const currentRecords = controller.getDocument().records;
+      const fittedBeforeSubscription = Object.entries(currentRecords).some(([id, raw]) => {
+        const current = raw as any;
+        const initial = initialRecords[id] as any;
+        return current?.typeName === 'shape' && current.type === 'uml-class' && initial?.type === 'uml-class'
+          && (current.props?.w !== initial.props?.w || current.props?.h !== initial.props?.h);
+      });
+      if (fittedBeforeSubscription) markChanged();
+    }
 
     return () => {
       unsubscribe();

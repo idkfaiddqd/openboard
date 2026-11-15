@@ -7,12 +7,29 @@
   },
   "include": [],
   "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/storage" },
-    { "path": "./packages/core" },
-    { "path": "./packages/mcp" },
-    { "path": "./apps/server" },
-    { "path": "./apps/web" },
-    { "path": "./cli" }
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/storage"
+    },
+    {
+      "path": "./packages/canvas-schema"
+    },
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/mcp"
+    },
+    {
+      "path": "./apps/server"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./cli"
+    }
   ]
 }

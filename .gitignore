@@ -46,3 +46,6 @@ yarn-error.log*
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Local DDD skills linked from terrain
+/.agents/skills/ddd-*

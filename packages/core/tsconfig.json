@@ -5,6 +5,18 @@
     "rootDir": "./src",
     "composite": true
   },
-  "include": ["src/**/*"],
-  "references": [{ "path": "../shared" }, { "path": "../storage" }]
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../storage"
+    },
+    {
+      "path": "../canvas-schema"
+    }
+  ]
 }

@@ -18,6 +18,7 @@ export class BoardCanvasController {
   private disposed = false;
   private readonly listeners = new Set<CanvasChangeCallback>();
   private storeUnlisten: (() => void) | null = null;
+  private deleteUnlisten: (() => void) | null = null;
 
   constructor(editor: Editor) {
     this.attachEditor(editor);
@@ -29,6 +30,26 @@ export class BoardCanvasController {
   private attachEditor(editor: Editor): void {
     this.editor = editor;
     this.disposed = false;
+
+    // Relationships keep endpoint IDs in props, so local classifier deletion must
+    // remove those records in the same store operation. Remote snapshots are authoritative.
+    this.deleteUnlisten = editor.store.sideEffects.registerAfterDeleteHandler('shape', (shape, source) => {
+      if (source !== 'user' || (shape.type !== 'uml-class' && shape.type !== 'bounded-context')) return;
+      const related = editor.store.allRecords().filter((record: any) =>
+        record.typeName === 'shape' && (record.type === 'uml-relationship' || record.type === 'context-interaction') &&
+        (record.props.from === shape.id || record.props.to === shape.id),
+      ).map((record) => record.id);
+      if (related.length) editor.store.remove(related);
+      if (shape.type === 'uml-class') {
+        const aggregates = editor.store.allRecords().filter((record: any) => record.typeName === 'shape' && record.type === 'aggregate-boundary' && (record.props.rootId === shape.id || record.props.memberIds.includes(shape.id)));
+        const updates = aggregates.map((aggregate: any) => {
+          const props = { ...aggregate.props, memberIds: aggregate.props.memberIds.filter((id: string) => id !== shape.id) };
+          if (props.rootId === shape.id) delete props.rootId;
+          return { ...aggregate, props };
+        });
+        if (updates.length) editor.store.put(updates as any);
+      }
+    });
 
     // Listen only to user-initiated document-scoped mutations
     this.storeUnlisten = editor.store.listen(
@@ -174,6 +195,8 @@ export class BoardCanvasController {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.deleteUnlisten?.();
+    this.deleteUnlisten = null;
     if (this.storeUnlisten) {
       this.storeUnlisten();
       this.storeUnlisten = null;

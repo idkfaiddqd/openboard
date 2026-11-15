@@ -20,7 +20,8 @@
   "dependencies": {
     "@openboard/shared": "*",
     "@openboard/storage": "*",
-    "tldraw": "^3.15.6"
+    "tldraw": "^3.15.6",
+    "@openboard/canvas-schema": "*"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

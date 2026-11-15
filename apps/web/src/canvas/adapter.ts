@@ -1,3 +1,4 @@
+import { createCanvasSchema } from '@openboard/canvas-schema';
 import type { BoardDocument } from '@openboard/shared';
 import { createTLStore, type TLStore, type TLStoreSnapshot } from 'tldraw';
 
@@ -109,7 +110,7 @@ export class TldrawDocumentAdapter {
       throw new Error(`Cannot create tldraw store: ${validation.error}`);
     }
 
-    const store = createTLStore();
+    const store = createTLStore({ schema: createCanvasSchema() });
     const normalizedRecords = this.normalizeRecords(doc.records);
 
     store.loadStoreSnapshot({

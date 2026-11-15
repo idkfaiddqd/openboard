@@ -5,11 +5,24 @@
     "rootDir": "./src",
     "composite": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*"
+  ],
   "references": [
-    { "path": "../packages/shared" },
-    { "path": "../packages/storage" },
-    { "path": "../packages/core" },
-    { "path": "../apps/server" }
+    {
+      "path": "../packages/shared"
+    },
+    {
+      "path": "../packages/storage"
+    },
+    {
+      "path": "../packages/core"
+    },
+    {
+      "path": "../apps/server"
+    },
+    {
+      "path": "../packages/canvas-schema"
+    }
   ]
 }

@@ -1,7 +1,16 @@
+import { assemblyProps, validateAssemblies } from './assembly-shapes.js';
+import { umlProps, validateRealizations } from './uml.js';
+import { contextProps, validateContextInteractions } from './context-shapes.js';
+import { aggregateProps, validateAggregates } from './aggregate-shapes.js';
+import { sequenceProps, validateSequences } from './sequence-shapes.js';
+import { createCanvasSchema, contextInteractionPoints } from '@openboard/canvas-schema';
 import {
   createTLStore,
+  Mat,
   defaultShapeUtils,
   createShapeId,
+  getIndexAbove,
+  type IndexKey,
   toRichText,
   type TLStore,
   type TLRecord,
@@ -85,7 +94,7 @@ export class HeadlessCanvasEngine {
    * Initializes a headless TLStore populated with the given document records.
    */
   static createStore(document: BoardDocument): TLStore {
-    const store = createTLStore();
+    const store = createTLStore({ schema: createCanvasSchema() });
     const records: Record<string, unknown> = { ...(document.records || {}) };
 
     // Ensure baseline document and page exist
@@ -256,6 +265,13 @@ export class HeadlessCanvasEngine {
         meta: shape.meta && Object.keys(shape.meta).length > 0 ? shape.meta : undefined,
       };
 
+      if (type === 'assembly-diagram') Object.assign(summary, { name: props.name, participants: props.participants, relations: props.relations, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'sequence-diagram') Object.assign(summary, { name: props.name, participants: props.participants, messages: props.messages, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'aggregate-boundary') Object.assign(summary, { name: props.name, rootId: props.rootId, memberIds: props.memberIds, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'bounded-context') Object.assign(summary, { name: props.name, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'context-interaction') Object.assign(summary, { from: props.from, to: props.to, label: props.label, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'uml-class') Object.assign(summary, { name: props.name, attributes: props.attributes, operations: props.operations, role: props.role, classifierKind: props.classifierKind ?? 'class', sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (type === 'uml-relationship') Object.assign(summary, { kind: props.kind, from: props.from, to: props.to, fromMultiplicity: props.fromMultiplicity, toMultiplicity: props.toMultiplicity, label: props.label, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
       summaries.push(summary);
     }
 
@@ -275,8 +291,30 @@ export class HeadlessCanvasEngine {
     let maxX = -Infinity;
     let maxY = -Infinity;
 
+    const byId = new Map(shapes.map((shape) => [shape.id, shape]));
+    const contextBounds = (shape: CanvasElementSummary) => {
+      const width = shape.w ?? 360, height = shape.h ?? 240;
+      const chain: CanvasElementSummary[] = []; const seen = new Set<string>();
+      let current: CanvasElementSummary | undefined = shape;
+      while (current && !seen.has(current.id)) {
+        seen.add(current.id); chain.push(current);
+        current = current.parentId ? byId.get(current.parentId) : undefined;
+      }
+      const transform = Mat.Identity();
+      for (const element of chain.reverse()) transform.translate(element.x, element.y).rotate(element.rotation ?? 0);
+      const corners = transform.applyToPoints([{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }]);
+      return { minX: Math.min(...corners.map((p) => p.x)), minY: Math.min(...corners.map((p) => p.y)), maxX: Math.max(...corners.map((p) => p.x)), maxY: Math.max(...corners.map((p) => p.y)) };
+    };
+    const include = (x: number, y: number) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); };
     for (const shape of shapes) {
-      if (shape.type === 'arrow') {
+      if (shape.type === 'bounded-context' || shape.type === 'aggregate-boundary' || shape.type === 'sequence-diagram' || shape.type === 'assembly-diagram') {
+        const bounds = contextBounds(shape); include(bounds.minX, bounds.minY); include(bounds.maxX, bounds.maxY);
+      } else if (shape.type === 'context-interaction') {
+        const from = shape.from ? byId.get(shape.from) : undefined, to = shape.to ? byId.get(shape.to) : undefined;
+        if (from?.type === 'bounded-context' && to?.type === 'bounded-context') {
+          for (const point of contextInteractionPoints(contextBounds(from), contextBounds(to))) include(point.x, point.y);
+        }
+      } else if (shape.type === 'arrow') {
         const startOffsetX =
           typeof shape.start?.x === 'number' && !isNaN(shape.start.x) ? shape.start.x : 0;
         const startOffsetY =
@@ -314,6 +352,7 @@ export class HeadlessCanvasEngine {
       }
     }
 
+    if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
     return {
       minX: Math.round(minX),
       minY: Math.round(minY),
@@ -389,9 +428,77 @@ export class CanvasService {
 
     const createdRecords: Record<string, any>[] = [];
     const bindingRecords: Record<string, any>[] = [];
+    // Indices are scoped to siblings; allocate above both existing and newly created shapes.
+    const highestIndexByParent = new Map<string, IndexKey>();
+    for (const record of store.allRecords()) {
+      if (record.typeName !== 'shape') continue;
+      const highest = highestIndexByParent.get(record.parentId);
+      if (!highest || record.index > highest) highestIndexByParent.set(record.parentId, record.index);
+    }
+    const nextIndex = (parentId: string): IndexKey => {
+      const index = getIndexAbove(highestIndexByParent.get(parentId));
+      highestIndexByParent.set(parentId, index);
+      return index;
+    };
 
+    const hasUml = inputs.some((input) => ['uml-class', 'uml-relationship', 'bounded-context', 'context-interaction', 'aggregate-boundary', 'sequence-diagram', 'assembly-diagram'].includes(input.type ?? ''));
+    const batchIds = new Set<string>();
+    const classIds = new Set(store.allRecords().filter((r: any) => r.typeName === 'shape' && r.type === 'uml-class').map((r) => String(r.id)));
+    if (hasUml) {
+      for (const input of inputs) {
+        if (input.id !== undefined) {
+          if (typeof input.id !== 'string' || !input.id.trim()) throw new CanvasOperationError('Invalid shape ID.');
+          const id = normalizeShapeId(input.id);
+          if (batchIds.has(id) || store.get(id)) throw new CanvasOperationError(`Shape ID ${id} already exists.`);
+          batchIds.add(id);
+          if (input.type === 'uml-class') classIds.add(id);
+        }
+      }
+    }
     for (let i = 0; i < inputs.length; i++) {
       const input = inputs[i]!;
+      const umlType = input.type === 'uml-class' || input.type === 'uml-relationship';
+      if (input.type === 'assembly-diagram') {
+        const props = assemblyProps(input as any);
+        if (input.x === undefined || input.y === undefined) throw new CanvasOperationError('Assembly requires x and y.');
+        const shapeId = normalizeShapeId(input.id);
+        if (store.get(shapeId) || createdRecords.some((r) => r.id === shapeId)) throw new CanvasOperationError(`Shape ID ${shapeId} already exists.`);
+        createdRecords.push({ id: shapeId, typeName: 'shape', type: input.type, x: input.x, y: input.y, rotation: 0, isLocked: false, opacity: 1, parentId: 'page:page', index: nextIndex('page:page'), props, meta: {} });
+        continue;
+      }
+      if (input.type === 'sequence-diagram') {
+        const props = sequenceProps(input as any);
+        if (input.x === undefined || input.y === undefined) throw new CanvasOperationError('Sequence requires x and y.');
+        const shapeId = normalizeShapeId(input.id);
+        if (store.get(shapeId) || createdRecords.some((r) => r.id === shapeId)) throw new CanvasOperationError(`Shape ID ${shapeId} already exists.`);
+        createdRecords.push({ id: shapeId, typeName: 'shape', type: input.type, x: input.x, y: input.y, rotation: 0, isLocked: false, opacity: 1, parentId: 'page:page', index: nextIndex('page:page'), props, meta: {} });
+        continue;
+      }
+      if (input.type === 'aggregate-boundary') {
+        const props = aggregateProps(input as any);
+        if (input.x === undefined || input.y === undefined) throw new CanvasOperationError('Aggregate requires x and y.');
+        const shapeId = normalizeShapeId(input.id);
+        if (store.get(shapeId) || createdRecords.some((r) => r.id === shapeId)) throw new CanvasOperationError(`Shape ID ${shapeId} already exists.`);
+        createdRecords.push({ id: shapeId, typeName: 'shape', type: input.type, x: input.x, y: input.y, rotation: 0, isLocked: false, opacity: 1, parentId: 'page:page', index: nextIndex('page:page'), props, meta: {} });
+        continue;
+      }
+      if (input.type === 'bounded-context' || input.type === 'context-interaction') {
+        const props = contextProps(input.type, input as any);
+        if (input.type === 'bounded-context' && (input.x === undefined || input.y === undefined)) throw new CanvasOperationError('Context requires x and y.');
+        const shapeId = normalizeShapeId(input.id);
+        if (store.get(shapeId) || createdRecords.some((r) => r.id === shapeId)) throw new CanvasOperationError(`Shape ID ${shapeId} already exists.`);
+        createdRecords.push({ id: shapeId, typeName: 'shape', type: input.type, x: input.x ?? 0, y: input.y ?? 0, rotation: 0, isLocked: false, opacity: 1, parentId: 'page:page', index: nextIndex('page:page'), props, meta: {} });
+        continue;
+      }
+      if (umlType) {
+        const props = umlProps(input.type!, input as any);
+        if (input.type === 'uml-class' && (input.x === undefined || input.y === undefined)) throw new CanvasOperationError('UML class requires x and y.');
+        if (input.type === 'uml-relationship' && (!classIds.has(props.from) || !classIds.has(props.to))) throw new CanvasOperationError('UML relationship endpoints must be classes on this board.');
+        const shapeId = normalizeShapeId(input.id);
+        if (store.get(shapeId) || createdRecords.some((r) => r.id === shapeId)) throw new CanvasOperationError(`Shape ID ${shapeId} already exists.`);
+        createdRecords.push({ id: shapeId, typeName: 'shape', type: input.type, x: input.x ?? 0, y: input.y ?? 0, rotation: 0, isLocked: false, opacity: 1, parentId: 'page:page', index: nextIndex('page:page'), props, meta: {} });
+        continue;
+      }
       if (
         typeof input.x !== 'number' ||
         isNaN(input.x) ||
@@ -515,7 +622,7 @@ export class CanvasService {
         isLocked: false,
         opacity: 1,
         parentId: input.parentId || 'page:page',
-        index: `a${i + 1}`,
+        index: nextIndex(input.parentId || 'page:page'),
         props,
         meta: input.meta || {},
       };
@@ -524,6 +631,10 @@ export class CanvasService {
     }
 
     // Apply creations to headless store
+    if (hasUml) {
+      const records = [...store.allRecords(), ...createdRecords]; const changed = new Set(createdRecords.map((r) => r.id));
+      validateRealizations(records, changed); validateContextInteractions(records, changed); validateAggregates(records, changed); validateSequences(records, changed); validateAssemblies(records, changed);
+    }
     store.put([...createdRecords, ...bindingRecords] as TLRecord[]);
 
     // Extract serialized document and persist to SQLite
@@ -561,10 +672,15 @@ export class CanvasService {
 
     const updatedRecords: Record<string, any>[] = [];
     const bindingUpdates: Record<string, any>[] = [];
+    const hasUml = updates.some((update) => {
+      const shape = store.get(normalizeShapeId(update.id)) as Record<string, any> | undefined;
+      return ['uml-class', 'uml-relationship', 'bounded-context', 'context-interaction', 'aggregate-boundary', 'sequence-diagram', 'assembly-diagram'].includes(shape?.type as string);
+    });
 
     for (const update of updates) {
       const shapeId = normalizeShapeId(update.id);
-      const existing = store.get(shapeId) as Record<string, any> | undefined;
+      const existing = (hasUml ? [...updatedRecords].reverse().find((record) => record.id === shapeId) : undefined)
+        ?? store.get(shapeId) as Record<string, any> | undefined;
 
       if (!existing || existing.typeName !== 'shape') {
         throw new CanvasOperationError(
@@ -573,6 +689,32 @@ export class CanvasService {
       }
 
       const type = existing.type || 'geo';
+      if (type === 'assembly-diagram') {
+        const props = assemblyProps(update as any, existing.props);
+        updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });
+        continue;
+      }
+      if (type === 'sequence-diagram') {
+        const props = sequenceProps(update as any, existing.props);
+        updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });
+        continue;
+      }
+      if (type === 'aggregate-boundary') {
+        const props = aggregateProps(update as any, existing.props);
+        updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });
+        continue;
+      }
+      if (type === 'bounded-context' || type === 'context-interaction') {
+        const props = contextProps(type, update as any, existing.props);
+        updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });
+        continue;
+      }
+      if (type === 'uml-class' || type === 'uml-relationship') {
+        const props = umlProps(type, update as any, existing.props);
+        if (type === 'uml-relationship' && [props.from, props.to].some((id) => (store.get(id as TLShapeId) as any)?.type !== 'uml-class')) throw new CanvasOperationError('UML relationship endpoints must be classes on this board.');
+        updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });
+        continue;
+      }
       const updatedProps = { ...existing.props, ...(update.props || {}) };
 
       if (update.w !== undefined) {
@@ -638,6 +780,11 @@ export class CanvasService {
               meta: {},
             });
           } else {
+            if (hasUml) {
+              for (let i = bindingUpdates.length - 1; i >= 0; i--) {
+                if (bindingUpdates[i]?.id === `binding:${shapeId}_start`) bindingUpdates.splice(i, 1);
+              }
+            }
             const existingStart = store.get(`binding:${shapeId}_start` as any);
             if (existingStart) {
               store.remove([`binding:${shapeId}_start` as any]);
@@ -663,6 +810,11 @@ export class CanvasService {
               meta: {},
             });
           } else {
+            if (hasUml) {
+              for (let i = bindingUpdates.length - 1; i >= 0; i--) {
+                if (bindingUpdates[i]?.id === `binding:${shapeId}_end`) bindingUpdates.splice(i, 1);
+              }
+            }
             const existingEnd = store.get(`binding:${shapeId}_end` as any);
             if (existingEnd) {
               store.remove([`binding:${shapeId}_end` as any]);
@@ -685,6 +837,10 @@ export class CanvasService {
       updatedRecords.push(updatedShape);
     }
 
+    if (hasUml) {
+      const records = [...store.allRecords(), ...updatedRecords]; const changed = new Set(updatedRecords.map((r) => r.id));
+      validateRealizations(records, changed); validateContextInteractions(records, changed); validateAggregates(records, changed); validateSequences(records, changed); validateAssemblies(records, changed);
+    }
     store.put([...updatedRecords, ...bindingUpdates] as TLRecord[]);
 
     const updatedDocument = HeadlessCanvasEngine.extractDocument(store);
@@ -734,6 +890,18 @@ export class CanvasService {
         deletedShapeIds: [],
       };
     }
+
+    for (const record of store.allRecords() as any[]) {
+      if (record.typeName === 'shape' && (record.type === 'uml-relationship' || record.type === 'context-interaction') && (toDelete.includes(record.props.from) || toDelete.includes(record.props.to)) && !toDelete.includes(record.id)) toDelete.push(record.id);
+    }
+
+    const aggregatesToUpdate = (store.allRecords() as any[]).filter((record) => record.typeName === 'shape' && record.type === 'aggregate-boundary' && !toDelete.includes(record.id) && (toDelete.includes(record.props.rootId) || record.props.memberIds.some((id: TLShapeId) => toDelete.includes(id)))).map((record) => {
+      const props = { ...record.props };
+      if (props.rootId && toDelete.includes(props.rootId)) delete props.rootId;
+      props.memberIds = props.memberIds.filter((id: TLShapeId) => !toDelete.includes(id));
+      return { ...record, props };
+    });
+    if (aggregatesToUpdate.length) store.put(aggregatesToUpdate as TLRecord[]);
 
     // Also remove any binding records referencing these shapes to preserve consistency
     const allRecords = store.allRecords();

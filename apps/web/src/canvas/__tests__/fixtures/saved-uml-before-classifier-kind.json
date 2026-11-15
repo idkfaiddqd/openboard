@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 2,
+  "records": {
+    "document:document": {
+      "typeName": "document",
+      "id": "document:document",
+      "gridSize": 10,
+      "name": "",
+      "meta": {}
+    },
+    "page:page": {
+      "typeName": "page",
+      "id": "page:page",
+      "name": "Page 1",
+      "index": "a1",
+      "meta": {}
+    },
+    "shape:map": {
+      "id": "shape:map",
+      "typeName": "shape",
+      "type": "uml-class",
+      "x": 100,
+      "y": 770,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "parentId": "page:page",
+      "index": "a7Bax",
+      "props": {
+        "w": 230,
+        "h": 160,
+        "name": "④ Map",
+        "role": "модель",
+        "attributes": [],
+        "operations": [
+          "Save()"
+        ]
+      },
+      "meta": {}
+    },
+    "shape:storage": {
+      "id": "shape:storage",
+      "typeName": "shape",
+      "type": "uml-class",
+      "x": 460,
+      "y": 770,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "parentId": "page:page",
+      "index": "a85Cd",
+      "props": {
+        "w": 230,
+        "h": 160,
+        "name": "⑤ Storage",
+        "role": "«interface» · порт",
+        "attributes": [
+          "ReadChunk(ChunkCoord)"
+        ],
+        "operations": [
+          "WriteChunk(...)"
+        ]
+      },
+      "meta": {}
+    },
+    "shape:WKbDM_rlQEHOVD5u9yaNd": {
+      "id": "shape:WKbDM_rlQEHOVD5u9yaNd",
+      "typeName": "shape",
+      "type": "uml-relationship",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "parentId": "page:page",
+      "index": "aBAIi",
+      "props": {
+        "kind": "dependency",
+        "from": "shape:map",
+        "to": "shape:storage",
+        "label": "⑧ uses"
+      },
+      "meta": {}
+    }
+  }
+}

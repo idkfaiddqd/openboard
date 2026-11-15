@@ -1,7 +1,12 @@
+import { AssemblyDiagramShapeUtil } from '../canvas/assembly-shapes.js';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tldraw, type Editor, type TLStore } from 'tldraw';
 import type { Board } from '@openboard/shared';
+import { umlShapeUtils } from '../canvas/uml-shapes.js';
+import { contextShapeUtils } from '../canvas/context-shapes.js';
+import { AggregateBoundaryShapeUtil } from '../canvas/aggregate-shapes.js';
+import { SequenceDiagramShapeUtil } from '../canvas/sequence-shapes.js';
 import {
   TldrawDocumentAdapter,
   BoardCanvasController,
@@ -40,6 +45,7 @@ export const BoardCanvasView: React.FC = () => {
   } = useBoardAutosave({
     boardId: id || '',
     controller,
+    initialDocument: board?.document,
     debounceMs: 1000,
   });
 
@@ -374,7 +380,7 @@ export const BoardCanvasView: React.FC = () => {
       <main className="canvas-container">
         {store && (
           <div className="tldraw-mount-wrapper">
-            <Tldraw store={store} onMount={handleMount} autoFocus />
+            <Tldraw store={store} shapeUtils={[...umlShapeUtils, ...contextShapeUtils, AggregateBoundaryShapeUtil, SequenceDiagramShapeUtil, AssemblyDiagramShapeUtil]} onMount={handleMount} autoFocus />
           </div>
         )}
       </main>

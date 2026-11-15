@@ -295,7 +295,31 @@ export class OpenBoardMcpServer {
                   type: {
                     type: 'string',
                     description:
-                      'Shape type: "geo" (default), "note", "text", "arrow", "line", "frame"',
+                      'Shape type: geo, note, text, arrow, line, frame, uml-class, uml-relationship, bounded-context, context-interaction, aggregate-boundary, sequence-diagram, or assembly-diagram',
+                  },
+                  name: { type: 'string', description: 'UML class name' },
+                  attributes: { type: 'array', items: { type: 'string' }, description: 'Ordered UML class attributes' },
+                  operations: { type: 'array', items: { type: 'string' }, description: 'Ordered UML class operations' },
+                  role: { type: 'string', description: 'Optional UML class stereotype' },
+                  classifierKind: { type: 'string', enum: ['class', 'interface'], description: 'UML classifier kind; defaults to class' },
+                  rootId: { type: 'string', pattern: '^$|\\S', description: 'Aggregate root class ID; empty clears it' },
+                  memberIds: { type: 'array', items: { type: 'string', pattern: '\\S' }, description: 'Known additional aggregate member class IDs' },
+                  participants: { type: 'array', items: { type: 'object', required: ['id', 'name'], properties: { id: { type: 'string', pattern: '\\S' }, name: { type: 'string', pattern: '\\S' } } } },
+                  relations: { type: 'array', items: { type: 'object', required: ['id', 'kind', 'from', 'to'], properties: { id: { type: 'string', pattern: '\\S' }, kind: { type: 'string', enum: ['create', 'inject', 'other'] }, from: { type: 'string', pattern: '\\S' }, to: { type: 'string', pattern: '\\S' }, actor: { type: 'string' }, label: { type: 'string' } }, allOf: [{ if: { properties: { kind: { const: 'other' } } }, then: { required: ['label'], properties: { label: { pattern: '\\S' } } } }, { if: { properties: { kind: { enum: ['create', 'other'] } } }, then: { not: { required: ['actor'] } } }] } },
+                  messages: { type: 'array', items: { type: 'object', required: ['id', 'from', 'to', 'label'], properties: { id: { type: 'string', pattern: '\\S' }, from: { type: 'string', pattern: '\\S' }, to: { type: 'string', pattern: '\\S' }, label: { type: 'string', pattern: '\\S' }, kind: { type: 'string' } } } },
+                  kind: { type: 'string', enum: ['association', 'generalization', 'dependency', 'aggregation', 'composition', 'realization'] },
+                  fromMultiplicity: { type: 'string' },
+                  toMultiplicity: { type: 'string' },
+                  label: { type: 'string' },
+                  sourceRef: {
+                    type: 'string',
+                    description:
+                      'Stable code element ID for linking the figure to source (e.g. "terrain/server/internal/locomotion/model#Registry.SetDestination"; bounded contexts use the context directory path). Stored verbatim, never validated server-side.',
+                  },
+                  syncedCommit: {
+                    type: 'string',
+                    description:
+                      'Commit hash at which the figure was last verified against sources (set by the sync agent; empty string clears it)',
                   },
                   x: { type: 'number', description: 'X position on canvas' },
                   y: { type: 'number', description: 'Y position on canvas' },
@@ -327,12 +351,12 @@ export class OpenBoardMcpServer {
                   from: {
                     type: 'string',
                     description:
-                      'For arrows: source shape ID to connect arrow start to (e.g. "api_gateway")',
+                      'Source shape ID; for UML relationships, the ID of a UML class',
                   },
                   to: {
                     type: 'string',
                     description:
-                      'For arrows: target shape ID to connect arrow end to (e.g. "db_postgres")',
+                      'Target shape ID; for UML relationships, the ID of a UML class',
                   },
                   start: {
                     type: 'object',
@@ -347,7 +371,34 @@ export class OpenBoardMcpServer {
                       'For unbound arrows: end handle offset in pixels relative to shape (x, y) (e.g. { "x": 0, "y": 160 } for a vertical line or { "x": 120, "y": 0 } for horizontal). Defaults to { "x": 120, "y": 0 }',
                   },
                 },
-                required: ['x', 'y'],
+                description: 'Classes require x, y, name, attributes and operations. Relationships require kind, from and to; coordinates are optional. Other shapes require x and y.',
+                allOf: [
+                  {
+                    if: { properties: { type: { const: 'uml-relationship' } }, required: ['type'] },
+                    then: { required: ['kind', 'from', 'to'], properties: { id: { pattern: '\\S' }, from: { pattern: '\\S' }, to: { pattern: '\\S' } } },
+                    else: {
+                      if: { properties: { type: { const: 'uml-class' } }, required: ['type'] },
+                      then: { required: ['x', 'y', 'name', 'attributes', 'operations'], properties: { id: { pattern: '\\S' }, w: { exclusiveMinimum: 0 }, h: { exclusiveMinimum: 0 } } },
+                      else: {
+                        if: { properties: { type: { const: 'bounded-context' } }, required: ['type'] },
+                        then: { required: ['x', 'y', 'name'], properties: { id: { pattern: '\\S' }, name: { pattern: '\\S' }, w: { exclusiveMinimum: 0 }, h: { exclusiveMinimum: 0 } } },
+                        else: {
+                          if: { properties: { type: { const: 'context-interaction' } }, required: ['type'] },
+                          then: { required: ['from', 'to'], properties: { id: { pattern: '\\S' }, from: { pattern: '\\S' }, to: { pattern: '\\S' } } },
+                          else: {
+                            if: { properties: { type: { const: 'aggregate-boundary' } }, required: ['type'] },
+                            then: { required: ['x', 'y', 'name'], properties: { id: { pattern: '\\S' }, name: { pattern: '\\S' }, w: { exclusiveMinimum: 0 }, h: { exclusiveMinimum: 0 } } },
+                            else: {
+                              if: { properties: { type: { const: 'sequence-diagram' } }, required: ['type'] },
+                              then: { required: ['x', 'y', 'name', 'participants', 'messages'], properties: { id: { pattern: '\\S' }, name: { pattern: '\\S' }, w: { minimum: 1 }, h: { minimum: 1 } } },
+                              else: { if: { properties: { type: { const: 'assembly-diagram' } }, required: ['type'] }, then: { required: ['x', 'y', 'name'], properties: { name: { pattern: '\\S' }, w: { minimum: 1 }, h: { minimum: 1 }, participants: { items: { required: ['id', 'name', 'x', 'y'], properties: { x: { type: 'number' }, y: { type: 'number' } } } } } }, else: { required: ['x', 'y'] } },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
               },
             },
           },
@@ -379,6 +430,30 @@ export class OpenBoardMcpServer {
                     type: 'string',
                     description:
                       'ID of the shape to update (e.g. "shape:api_gateway" or "api_gateway")',
+                  },
+                  name: { type: 'string', description: 'UML class name' },
+                  attributes: { type: 'array', items: { type: 'string' }, description: 'Ordered UML class attributes' },
+                  operations: { type: 'array', items: { type: 'string' }, description: 'Ordered UML class operations' },
+                  role: { type: 'string', description: 'Optional UML class stereotype' },
+                  classifierKind: { type: 'string', enum: ['class', 'interface'], description: 'UML classifier kind; defaults to class' },
+                  rootId: { type: 'string', pattern: '^$|\\S', description: 'Aggregate root class ID; empty clears it' },
+                  memberIds: { type: 'array', items: { type: 'string', pattern: '\\S' }, description: 'Known additional aggregate member class IDs' },
+                  participants: { type: 'array', items: { type: 'object', required: ['id', 'name'], properties: { id: { type: 'string', pattern: '\\S' }, name: { type: 'string', pattern: '\\S' } } } },
+                  relations: { type: 'array', items: { type: 'object', required: ['id', 'kind', 'from', 'to'], properties: { id: { type: 'string', pattern: '\\S' }, kind: { type: 'string', enum: ['create', 'inject', 'other'] }, from: { type: 'string', pattern: '\\S' }, to: { type: 'string', pattern: '\\S' }, actor: { type: 'string' }, label: { type: 'string' } }, allOf: [{ if: { properties: { kind: { const: 'other' } } }, then: { required: ['label'], properties: { label: { pattern: '\\S' } } } }, { if: { properties: { kind: { enum: ['create', 'other'] } } }, then: { not: { required: ['actor'] } } }] } },
+                  messages: { type: 'array', items: { type: 'object', required: ['id', 'from', 'to', 'label'], properties: { id: { type: 'string', pattern: '\\S' }, from: { type: 'string', pattern: '\\S' }, to: { type: 'string', pattern: '\\S' }, label: { type: 'string', pattern: '\\S' }, kind: { type: 'string' } } } },
+                  kind: { type: 'string', enum: ['association', 'generalization', 'dependency', 'aggregation', 'composition', 'realization'] },
+                  fromMultiplicity: { type: 'string' },
+                  toMultiplicity: { type: 'string' },
+                  label: { type: 'string' },
+                  sourceRef: {
+                    type: 'string',
+                    description:
+                      'Stable code element ID for linking the figure to source; stored verbatim, never validated server-side',
+                  },
+                  syncedCommit: {
+                    type: 'string',
+                    description:
+                      'Commit hash at which the figure was last verified against sources; empty string clears it',
                   },
                   x: { type: 'number', description: 'New X position' },
                   y: { type: 'number', description: 'New Y position' },

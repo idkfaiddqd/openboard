@@ -1,7 +1,12 @@
+export interface AssemblyParticipant { id: string; name: string; x: number; y: number; }
+export type AssemblyRelation = { id: string; from: string; to: string } & ({ kind: 'create'; label?: string } | { kind: 'inject'; actor?: string; label?: string } | { kind: 'other'; label: string });
 /**
  * Unique identifier for an OpenBoard board.
  */
 export type BoardId = string;
+
+export interface SequenceParticipant { id: string; name: string; }
+export interface SequenceMessage { id: string; from: string; to: string; label: string; kind?: string; }
 
 /**
  * Metadata associated with a board, keeping lightweight indexing
@@ -112,6 +117,27 @@ export interface CanvasElementSummary {
   readonly end?: CanvasPoint;
   readonly points?: CanvasPoint[];
   readonly name?: string;
+  readonly attributes?: string[];
+  readonly operations?: string[];
+  readonly role?: string;
+  readonly classifierKind?: 'class' | 'interface';
+  readonly rootId?: string;
+  readonly memberIds?: string[];
+  readonly participants?: (SequenceParticipant | AssemblyParticipant)[];
+  relations?: AssemblyRelation[];
+  readonly messages?: SequenceMessage[];
+  readonly kind?: 'association' | 'generalization' | 'dependency' | 'aggregation' | 'composition' | 'realization';
+  readonly fromMultiplicity?: string;
+  readonly toMultiplicity?: string;
+  readonly label?: string;
+  /**
+   * Stable identifier of the code element this figure links to (grammar documented in the feature contract; stored verbatim, never validated server-side).
+   */
+  readonly sourceRef?: string;
+  /**
+   * Commit hash at which the figure's links were last verified against sources (set by the sync agent; stored verbatim).
+   */
+  readonly syncedCommit?: string;
   /**
    * For arrows or lines: ID of the source shape this element connects from.
    */
@@ -140,8 +166,8 @@ export interface CanvasState {
 export interface CreateShapeInput {
   id?: string;
   type?: string; // 'geo' | 'text' | 'note' | 'arrow' | 'line' | 'frame'
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
   w?: number;
   h?: number;
   geo?: string; // 'rectangle' | 'ellipse' | 'triangle' | 'diamond' | etc.
@@ -160,6 +186,27 @@ export interface CreateShapeInput {
   end?: CanvasPoint;
   points?: CanvasPoint[];
   name?: string;
+  attributes?: string[];
+  operations?: string[];
+  role?: string;
+  classifierKind?: 'class' | 'interface';
+  rootId?: string;
+  memberIds?: string[];
+  participants?: (SequenceParticipant | AssemblyParticipant)[];
+  relations?: AssemblyRelation[];
+  messages?: SequenceMessage[];
+  kind?: 'association' | 'generalization' | 'dependency' | 'aggregation' | 'composition' | 'realization';
+  fromMultiplicity?: string;
+  toMultiplicity?: string;
+  label?: string;
+  /**
+   * Stable identifier of the code element this figure links to (stored verbatim, never validated server-side).
+   */
+  sourceRef?: string;
+  /**
+   * Commit hash at which the figure's links were last verified against sources.
+   */
+  syncedCommit?: string;
   /**
    * For arrows: target shape ID or name to bind start of arrow to.
    */
@@ -177,6 +224,23 @@ export interface CreateShapeInput {
  */
 export interface UpdateShapeInput {
   id: string;
+  name?: string;
+  attributes?: string[];
+  operations?: string[];
+  role?: string;
+  classifierKind?: 'class' | 'interface';
+  rootId?: string;
+  memberIds?: string[];
+  participants?: (SequenceParticipant | AssemblyParticipant)[];
+  relations?: AssemblyRelation[];
+  messages?: SequenceMessage[];
+  kind?: 'association' | 'generalization' | 'dependency' | 'aggregation' | 'composition' | 'realization';
+  fromMultiplicity?: string;
+  toMultiplicity?: string;
+  label?: string;
+  sourceRef?: string;
+  syncedCommit?: string;
+
   x?: number;
   y?: number;
   w?: number;

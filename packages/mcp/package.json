@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@openboard/storage": "*",
+    "ajv": "^6.15.0",
     "typescript": "^5.7.3"
   }
 }
