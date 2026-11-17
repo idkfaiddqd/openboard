@@ -1,3 +1,4 @@
+import { applyMapping } from './mapping.js';
 import { CanvasOperationError } from '@openboard/shared';
 
 function nonempty(value: unknown, field: string) {
@@ -39,6 +40,7 @@ export function sequenceProps(input: Record<string, any>, existing?: Record<stri
     if (typeof input[key] !== 'number' || !Number.isFinite(input[key]) || (['w','h'].includes(key) && input[key] < 1)) throw new CanvasOperationError(`Invalid ${key}.`);
     if (key === 'w' || key === 'h') props[key] = input[key];
   }
+  applyMapping(input, props);
   return props;
 }
 

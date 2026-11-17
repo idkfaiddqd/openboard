@@ -1,4 +1,5 @@
-import { BaseBoxShapeUtil, SVGContainer, getIndices, type TLHandle, type TLHandleDragInfo } from 'tldraw';
+import { SvgMappingButton } from './mapping-button.js';
+import { BaseBoxShapeUtil, getIndices, type TLHandle, type TLHandleDragInfo } from 'tldraw';
 import { assemblyDiagramProps } from '@openboard/canvas-schema';
 
 type Participant = { id: string; name: string; x: number; y: number };
@@ -26,7 +27,7 @@ export class AssemblyDiagramShapeUtil extends BaseBoxShapeUtil<any> {
   override component(shape: any) {
     const { w, h, name, participants, relations } = shape.props as { w: number; h: number; name: string; participants: Participant[]; relations: Relation[] };
     const byId = new Map(participants.map(p => [p.id, p]));
-    return <SVGContainer style={{ overflow: 'visible' }}>
+    return <svg className="tl-svg-container" style={{ overflow: 'visible' }}>
       <rect width={w} height={h} fill="white" stroke="black" />
       <g transform={`scale(${w / 600} ${h / 400})`}>
         {[<text key="title" x={12} y={20} fontSize="14" fontWeight="bold">{name}</text>,
@@ -43,7 +44,8 @@ export class AssemblyDiagramShapeUtil extends BaseBoxShapeUtil<any> {
         }),
         ...participants.map(p => <g key={p.id}><rect x={p.x} y={p.y} width={120} height={40} fill="white" stroke="black" /><text x={p.x + 60} y={p.y + 25} fontSize="14" textAnchor="middle">{p.name}</text></g>)]}
       </g>
-    </SVGContainer>;
+      <SvgMappingButton shape={shape} x={Math.max(0, w - 36)} y={4} />
+    </svg>;
   }
   override indicator(shape: any) { return <rect width={shape.props.w} height={shape.props.h} />; }
 }

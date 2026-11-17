@@ -1,3 +1,5 @@
+import { getAssetUrlsByImport } from '@tldraw/assets/imports.vite';
+import { MappingPanelLayout } from '../canvas/mapping-panel.js';
 import { AssemblyDiagramShapeUtil } from '../canvas/assembly-shapes.js';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -16,6 +18,9 @@ import {
 import { IconArrowLeft, IconEdit, IconAlertCircle } from '../components/icons/Icons.js';
 import { Button } from '../components/ui/Button.js';
 import { useToast } from '../components/ui/ToastContext.js';
+
+// Bundle the matching tldraw resources locally: loading a saved text shape waits for its font.
+const tldrawAssetUrls = getAssetUrlsByImport();
 
 type BoardViewStatus = 'loading' | 'ready' | 'not-found' | 'error' | 'corrupt-document';
 
@@ -379,9 +384,11 @@ export const BoardCanvasView: React.FC = () => {
 
       <main className="canvas-container">
         {store && (
+          <MappingPanelLayout key={id} store={store}>
           <div className="tldraw-mount-wrapper">
-            <Tldraw store={store} shapeUtils={[...umlShapeUtils, ...contextShapeUtils, AggregateBoundaryShapeUtil, SequenceDiagramShapeUtil, AssemblyDiagramShapeUtil]} onMount={handleMount} autoFocus />
+            <Tldraw assetUrls={tldrawAssetUrls} store={store} shapeUtils={[...umlShapeUtils, ...contextShapeUtils, AggregateBoundaryShapeUtil, SequenceDiagramShapeUtil, AssemblyDiagramShapeUtil]} onMount={handleMount} autoFocus />
           </div>
+          </MappingPanelLayout>
         )}
       </main>
     </div>

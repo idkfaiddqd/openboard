@@ -1,4 +1,5 @@
-import { BaseBoxShapeUtil, SVGContainer } from 'tldraw';
+import { SvgMappingButton } from './mapping-button.js';
+import { BaseBoxShapeUtil } from 'tldraw';
 import { sequenceDiagramProps } from '@openboard/canvas-schema';
 
 type Participant = { id: string; name: string };
@@ -17,7 +18,7 @@ export class SequenceDiagramShapeUtil extends BaseBoxShapeUtil<any> {
     const spacing = participants.length > 1 ? (w - 2 * margin) / (participants.length - 1) : w;
     const participantWidth = Math.min(140, spacing * 0.8);
     const positions = new Map(participants.map((participant, i) => [participant.id, participants.length === 1 ? w / 2 : margin + spacing * i]));
-    return <SVGContainer style={{ overflow: 'visible' }}>
+    return <svg className="tl-svg-container" style={{ overflow: 'visible' }}>
       <rect width={w} height={h} fill="white" stroke="black" />
       <text x={12} y={20 * verticalScale} fontSize="14" fontWeight="bold">{name}</text>
       {participants.map((participant) => {
@@ -38,7 +39,8 @@ export class SequenceDiagramShapeUtil extends BaseBoxShapeUtil<any> {
           <text x={(from + to) / 2} y={y - 8 * verticalScale} fontSize="14" textAnchor="middle">{message.kind ? `«${message.kind}» ` : ''}{message.label}</text>
         </g>;
       })}
-    </SVGContainer>;
+      <SvgMappingButton shape={shape} x={Math.max(0, w - 36)} y={4} />
+    </svg>;
   }
   override indicator(shape: any) { return <rect width={shape.props.w} height={shape.props.h} />; }
 }

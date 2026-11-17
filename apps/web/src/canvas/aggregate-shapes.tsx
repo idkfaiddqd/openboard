@@ -1,3 +1,4 @@
+import { MappingButton } from './mapping-button.js';
 import { BaseBoxShapeUtil, HTMLContainer, Rectangle2d } from 'tldraw';
 import { aggregateBoundaryProps } from '@openboard/canvas-schema';
 
@@ -9,6 +10,7 @@ export class AggregateBoundaryShapeUtil extends BaseBoxShapeUtil<any> {
   override component(shape: any) {
     return <HTMLContainer style={{ width: shape.props.w, height: shape.props.h, border: '1px dashed black', background: 'transparent', font: '14px sans-serif' }}>
       <div style={{ display: 'inline-block', padding: '4px 8px', borderBottom: '1px solid black', borderRight: '1px solid black', background: 'white' }}>«Aggregate» {shape.props.name}</div>
+      <MappingButton shape={shape} />
     </HTMLContainer>;
   }
   override indicator(shape: any) { return <rect width={shape.props.w} height={shape.props.h} />; }

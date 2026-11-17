@@ -1,3 +1,4 @@
+import { dddShapeTypes, rejectOrdinaryMapping } from './mapping.js';
 import { assemblyProps, validateAssemblies } from './assembly-shapes.js';
 import { umlProps, validateRealizations } from './uml.js';
 import { contextProps, validateContextInteractions } from './context-shapes.js';
@@ -187,7 +188,7 @@ export class HeadlessCanvasEngine {
   /**
    * Extracts clean, semantic summaries of all shapes in the store.
    */
-  static extractShapeSummaries(store: TLStore): CanvasElementSummary[] {
+  static extractShapeSummaries(store: TLStore, options?: { includeMapping?: boolean }): CanvasElementSummary[] {
     const records = store.allRecords();
     const shapeRecords = records.filter((r) => r.typeName === 'shape') as Array<
       Record<string, any>
@@ -272,6 +273,10 @@ export class HeadlessCanvasEngine {
       if (type === 'context-interaction') Object.assign(summary, { from: props.from, to: props.to, label: props.label, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
       if (type === 'uml-class') Object.assign(summary, { name: props.name, attributes: props.attributes, operations: props.operations, role: props.role, classifierKind: props.classifierKind ?? 'class', sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
       if (type === 'uml-relationship') Object.assign(summary, { kind: props.kind, from: props.from, to: props.to, fromMultiplicity: props.fromMultiplicity, toMultiplicity: props.toMultiplicity, label: props.label, sourceRef: props.sourceRef, syncedCommit: props.syncedCommit });
+      if (dddShapeTypes.has(type)) {
+        Object.assign(summary, { hasMapping: props.mapping !== undefined });
+        if (options?.includeMapping && props.mapping !== undefined) Object.assign(summary, { mapping: props.mapping });
+      }
       summaries.push(summary);
     }
 
@@ -388,10 +393,10 @@ export class CanvasService {
   /**
    * Reads and summarizes the canvas state for an AI agent.
    */
-  async getCanvasState(boardId: BoardId): Promise<CanvasState> {
+  async getCanvasState(boardId: BoardId, options?: { includeMapping?: boolean }): Promise<CanvasState> {
     const board = await this.boardService.getBoard(boardId);
     const store = HeadlessCanvasEngine.createStore(board.document);
-    const shapes = HeadlessCanvasEngine.extractShapeSummaries(store);
+    const shapes = HeadlessCanvasEngine.extractShapeSummaries(store, options);
     const bounds = HeadlessCanvasEngine.computeBounds(shapes);
 
     return {
@@ -457,6 +462,7 @@ export class CanvasService {
     }
     for (let i = 0; i < inputs.length; i++) {
       const input = inputs[i]!;
+      rejectOrdinaryMapping(input.type || 'geo', input);
       const umlType = input.type === 'uml-class' || input.type === 'uml-relationship';
       if (input.type === 'assembly-diagram') {
         const props = assemblyProps(input as any);
@@ -689,6 +695,7 @@ export class CanvasService {
       }
 
       const type = existing.type || 'geo';
+      rejectOrdinaryMapping(type, update);
       if (type === 'assembly-diagram') {
         const props = assemblyProps(update as any, existing.props);
         updatedRecords.push({ ...existing, x: update.x ?? existing.x, y: update.y ?? existing.y, props });

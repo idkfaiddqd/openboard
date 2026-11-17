@@ -1,4 +1,5 @@
-import { BaseBoxShapeUtil, ShapeUtil, Polyline2d, Vec, Mat, HTMLContainer, SVGContainer } from 'tldraw';
+import { MappingButton, SvgMappingButton, mappingRoutePosition } from './mapping-button.js';
+import { BaseBoxShapeUtil, ShapeUtil, Polyline2d, Vec, Mat, HTMLContainer } from 'tldraw';
 import { boundedContextProps, contextInteractionProps, contextInteractionPoints } from '@openboard/canvas-schema';
 
 export class BoundedContextShapeUtil extends BaseBoxShapeUtil<any> {
@@ -10,6 +11,7 @@ export class BoundedContextShapeUtil extends BaseBoxShapeUtil<any> {
       <div style={{ display: 'inline-block', padding: '4px 8px', borderBottom: '1px solid black', borderRight: '1px solid black', background: 'white' }}>
         «bounded context» {shape.props.name}
       </div>
+      <MappingButton shape={shape} />
     </HTMLContainer>;
   }
   override indicator(shape: any) { return <rect width={shape.props.w} height={shape.props.h} />; }
@@ -48,11 +50,12 @@ export class ContextInteractionShapeUtil extends ShapeUtil<any> {
     const labelPage = { x: (labelStart.x + labelEnd.x) / 2 + (verticalLabel ? 8 : 0), y: (labelStart.y + labelEnd.y) / 2 - (verticalLabel ? 0 : 8) };
     const labelLocal = Mat.applyToPoint(Mat.Inverse(localToPage), labelPage);
     const labelRotation = -Mat.Rotation(localToPage) * 180 / Math.PI;
-    return <SVGContainer style={{ overflow: 'visible', pointerEvents: 'none' }}>
+    return <svg className="tl-svg-container" style={{ overflow: 'visible', pointerEvents: 'none' }}>
       <polyline points={points.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="black" />
       <polyline points={`${x - uy * 6},${y + ux * 6} ${b!.x},${b!.y} ${x + uy * 6},${y - ux * 6}`} fill="none" stroke="black" />
       {shape.props.label && <text x={labelLocal.x} y={labelLocal.y} fontSize="14" textAnchor={verticalLabel ? 'start' : 'middle'} transform={`rotate(${labelRotation} ${labelLocal.x} ${labelLocal.y})`}>{shape.props.label}</text>}
-    </SVGContainer>;
+      <SvgMappingButton shape={shape} {...mappingRoutePosition(points)} />
+    </svg>;
   }
   override indicator(shape: any) { return <polyline points={this.points(shape).map((p) => `${p.x},${p.y}`).join(' ')} fill="none" />; }
 }

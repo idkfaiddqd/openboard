@@ -1,3 +1,4 @@
+import { applyMapping } from './mapping.js';
 import { CanvasOperationError } from '@openboard/shared';
 
 function shapeId(value: unknown): string {
@@ -30,6 +31,7 @@ export function aggregateProps(input: Record<string, any>, existing?: Record<str
     if (typeof input[key] !== 'number' || !Number.isFinite(input[key]) || (['w', 'h'].includes(key) && input[key] <= 0)) throw new CanvasOperationError(`Invalid ${key}.`);
     if (key === 'w' || key === 'h') props[key] = input[key];
   }
+  applyMapping(input, props);
   return props;
 }
 

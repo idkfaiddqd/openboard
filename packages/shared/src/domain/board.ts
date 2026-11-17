@@ -1,3 +1,5 @@
+import type { DddMapping } from './mapping.js';
+
 export interface AssemblyParticipant { id: string; name: string; x: number; y: number; }
 export type AssemblyRelation = { id: string; from: string; to: string } & ({ kind: 'create'; label?: string } | { kind: 'inject'; actor?: string; label?: string } | { kind: 'other'; label: string });
 /**
@@ -99,6 +101,8 @@ export interface CanvasBounds {
  * formatted cleanly for external AI agents without internal tldraw noise.
  */
 export interface CanvasElementSummary {
+  readonly hasMapping?: boolean;
+  readonly mapping?: DddMapping;
   readonly id: string;
   readonly type: string;
   readonly x: number;
@@ -164,6 +168,7 @@ export interface CanvasState {
  * High-level shape input for agent shape creation.
  */
 export interface CreateShapeInput {
+  mapping?: DddMapping | null;
   id?: string;
   type?: string; // 'geo' | 'text' | 'note' | 'arrow' | 'line' | 'frame'
   x?: number;
@@ -223,6 +228,7 @@ export interface CreateShapeInput {
  * High-level shape update input for agent shape modifications.
  */
 export interface UpdateShapeInput {
+  mapping?: DddMapping | null;
   id: string;
   name?: string;
   attributes?: string[];

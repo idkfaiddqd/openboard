@@ -1,3 +1,4 @@
+import { mappingInputSchema } from './mapping-schema.js';
 import type { BoardService, CanvasService } from '@openboard/core';
 import type {
   CanvasScreenshotOptions,
@@ -212,6 +213,7 @@ export class OpenBoardMcpServer {
         inputSchema: {
           type: 'object',
           properties: {
+            include_mapping: { type: 'boolean', description: 'Include complete DDD mappings; default returns hasMapping only.' },
             board_id: {
               type: 'string',
               description: 'The unique ID of the board to inspect',
@@ -311,6 +313,7 @@ export class OpenBoardMcpServer {
                   fromMultiplicity: { type: 'string' },
                   toMultiplicity: { type: 'string' },
                   label: { type: 'string' },
+                  mapping: mappingInputSchema,
                   sourceRef: {
                     type: 'string',
                     description:
@@ -445,6 +448,7 @@ export class OpenBoardMcpServer {
                   fromMultiplicity: { type: 'string' },
                   toMultiplicity: { type: 'string' },
                   label: { type: 'string' },
+                  mapping: mappingInputSchema,
                   sourceRef: {
                     type: 'string',
                     description:
@@ -746,7 +750,10 @@ export class OpenBoardMcpServer {
         // ─── CANVAS OPERATIONS & VISUAL INSPECTION ─────────────────────────
         case 'get_canvas_state': {
           const boardId = resolveBoardId();
-          const state = await this.canvasService.getCanvasState(boardId);
+          if (args['include_mapping'] !== undefined && typeof args['include_mapping'] !== 'boolean') {
+            throw new CanvasOperationError('include_mapping must be a boolean.');
+          }
+          const state = await this.canvasService.getCanvasState(boardId, { includeMapping: args['include_mapping'] as boolean | undefined });
           return {
             content: [{ type: 'text', text: JSON.stringify(state, null, 2) }],
           };

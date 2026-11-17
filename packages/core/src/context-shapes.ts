@@ -1,3 +1,4 @@
+import { applyMapping } from './mapping.js';
 import { CanvasOperationError } from '@openboard/shared';
 
 export function contextProps(type: string, input: Record<string, any>, existing?: Record<string, any>) {
@@ -31,6 +32,7 @@ export function contextProps(type: string, input: Record<string, any>, existing?
     }
   }
   for (const key of ['x', 'y']) if (input[key] !== undefined && (typeof input[key] !== 'number' || !Number.isFinite(input[key]))) throw new CanvasOperationError(`Invalid ${key}.`);
+  applyMapping(input, props);
   return props;
 }
 

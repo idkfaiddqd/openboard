@@ -2237,3 +2237,68 @@ select {
     padding: var(--space-6) var(--space-6);
   }
 }
+
+/* Mapping controls are temporary view state, outside shape content measurements. */
+.ddd-mapping-button, .ddd-mapping-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.ddd-mapping-button { position: absolute; top: 4px; right: 4px; }
+.ddd-mapping-button:hover, .ddd-mapping-button[aria-expanded="true"], .ddd-mapping-close:hover {
+  color: var(--accent);
+  background: var(--bg-surface-hover);
+}
+.ddd-mapping-button:focus-visible, .ddd-mapping-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ddd-mapping-control { overflow: visible; pointer-events: auto; }
+.ddd-mapping-layout { display: flex; position: absolute; inset: 0; min-width: 0; min-height: 0; }
+.ddd-mapping-canvas { flex: 1; min-width: 0; min-height: 0; position: relative; }
+.ddd-mapping-panel {
+  flex: 0 0 min(44%, 560px);
+  min-width: 320px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 22px;
+  border-left: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.ddd-mapping-panel[hidden] { display: none; }
+.ddd-mapping-panel-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ddd-mapping-panel h2 { margin: 0; font-size: 18px; }
+.ddd-mapping-panel h3 { margin: 0 0 14px; font-size: 14px; }
+.ddd-mapping-panel h4 { margin: 0 0 12px; font-size: 14px; font-weight: 500; }
+.ddd-mapping-panel h5, .ddd-mapping-label { margin: 0 0 4px; color: var(--text-secondary); font-size: 12px; font-weight: 400; }
+.ddd-mapping-panel p { margin: 0; white-space: pre-wrap; }
+.ddd-mapping-panel .ddd-mapping-subject { margin: 18px 0 6px; font-size: 16px; font-weight: 600; }
+.ddd-mapping-scope { margin-top: 14px !important; }
+.ddd-mapping-panel section { margin-top: 22px; }
+.ddd-mapping-section { border-top: 1px solid var(--border-default); padding-top: 20px; }
+.ddd-mapping-entry + .ddd-mapping-entry { border-top: 1px solid var(--border-default); margin-top: 22px; padding-top: 20px; }
+.ddd-mapping-field { margin-top: 14px; }
+.ddd-mapping-artifact + .ddd-mapping-artifact, .ddd-mapping-source + .ddd-mapping-source, .ddd-mapping-evidence + .ddd-mapping-evidence { margin-top: 14px; }
+.ddd-mapping-role { color: var(--accent); font-size: 12px; }
+.ddd-mapping-repository { font-weight: 500; }
+.ddd-mapping-panel code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.7 var(--font-mono); }
+.ddd-mapping-panel ul { padding-left: 20px; margin: 0; }
+.ddd-mapping-panel .ddd-mapping-empty { padding: 36px 0; }
+@media (max-width: 700px) {
+  .ddd-mapping-layout[data-mapping-open="true"] { flex-direction: column; }
+  .ddd-mapping-panel { flex: 0 1 52%; min-width: 0; width: 100%; border-left: 0; border-top: 1px solid var(--border-default); padding: 16px; }
+}

@@ -1,3 +1,4 @@
+import { applyMapping } from './mapping.js';
 import { CanvasOperationError } from '@openboard/shared';
 
 function nonempty(value: unknown, field: string): string {
@@ -38,6 +39,7 @@ export function assemblyProps(input: Record<string, any>, existing?: Record<stri
       else props[key] = input[key];
     }
   }
+  applyMapping(input, props);
   return props;
 }
 export function validateAssemblies(records: Iterable<any>, changedIds: ReadonlySet<string>) {

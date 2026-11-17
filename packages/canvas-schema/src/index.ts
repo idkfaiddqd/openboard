@@ -1,7 +1,49 @@
 import { T, createTLSchema, defaultShapeSchemas } from 'tldraw';
 
+const nonemptyMappingText = T.string.check((value) => {
+  if (!/\S/.test(value)) throw new Error('Mapping text must contain a non-whitespace character.');
+});
+const mappingSourceFields = {
+  locator: nonemptyMappingText,
+  repository: T.optional(nonemptyMappingText),
+  revision: T.optional(T.string),
+  description: T.optional(T.string),
+};
+const uniqueMappingIds = <V extends { id: string }>(values: V[]) => {
+  if (new Set(values.map((value) => value.id)).size !== values.length) {
+    throw new Error('Duplicate mapping ID.');
+  }
+};
+const mappingEntry = T.object({
+  id: nonemptyMappingText,
+  responsibility: nonemptyMappingText,
+  explanation: T.optional(T.string),
+  artifacts: T.arrayOf(T.object({ ...mappingSourceFields, participation: nonemptyMappingText })),
+  evidence: T.arrayOf(T.object({
+    claim: nonemptyMappingText,
+    locator: T.optional(nonemptyMappingText),
+    repository: T.optional(nonemptyMappingText),
+    revision: T.optional(T.string),
+    method: T.optional(T.string),
+    limits: T.optional(T.string),
+  })),
+  gaps: T.arrayOf(nonemptyMappingText),
+});
+
+/** One runtime contract for both browser documents and headless writes. IDs remain verbatim. */
+export const dddMappingValidator = T.object({
+  scope: T.optional(T.string),
+  sources: T.arrayOf(T.object(mappingSourceFields)),
+  sections: T.arrayOf(T.object({
+    id: nonemptyMappingText,
+    title: nonemptyMappingText,
+    entries: T.arrayOf(mappingEntry).check(uniqueMappingIds),
+  })).check(uniqueMappingIds),
+});
+
 /** Stable link to a code element (sourceRef) and the commit the figure was last verified against (syncedCommit). Stored verbatim, never validated server-side. Part of every DDD primitive's props, both in the store schema and in web shape utils. */
 const linkProps = {
+  mapping: T.optional(dddMappingValidator),
   sourceRef: T.optional(T.string),
   syncedCommit: T.optional(T.string),
 };

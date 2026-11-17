@@ -1,3 +1,4 @@
+import { applyMapping } from './mapping.js';
 import { CanvasOperationError } from '@openboard/shared';
 
 const kinds = new Set(['association', 'generalization', 'dependency', 'aggregation', 'composition', 'realization']);
@@ -34,6 +35,7 @@ export function umlProps(type: string, input: Record<string, any>, existing?: Re
     if (!kinds.has(props.kind) || !props.from?.trim() || !props.to?.trim()) throw new CanvasOperationError('UML relationship requires a valid kind and endpoints.');
     for (const key of ['from', 'to']) props[key] = props[key].trim().startsWith('shape:') ? props[key].trim() : `shape:${props[key].trim()}`;
   }
+  applyMapping(input, props);
   return props;
 }
 

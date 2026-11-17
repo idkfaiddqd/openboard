@@ -1,5 +1,6 @@
+import { MappingButton, SvgMappingButton, mappingRoutePosition } from './mapping-button.js';
 import { useLayoutEffect, useRef } from 'react';
-import { BaseBoxShapeUtil, ShapeUtil, Polyline2d, Vec, HTMLContainer, SVGContainer, useEditor, useValue, type TLShapeId } from 'tldraw';
+import { BaseBoxShapeUtil, ShapeUtil, Polyline2d, Vec, HTMLContainer, useEditor, useValue, type TLShapeId } from 'tldraw';
 import { umlClassProps, umlRelationshipProps } from '@openboard/canvas-schema';
 
 function UmlClassContent({ shape }: { shape: any }) {
@@ -38,6 +39,7 @@ function UmlClassContent({ shape }: { shape: any }) {
       <div style={{ borderTop: '1px solid black', padding: 4 }}>{attributes.map((v: string, i: number) => <div key={i}>{v}</div>)}</div>
       <div style={{ borderTop: '1px solid black', padding: 4 }}>{operations.map((v: string, i: number) => <div key={i}>{v}</div>)}</div>
     </div>
+    <MappingButton shape={shape} />
   </HTMLContainer>;
 }
 
@@ -98,14 +100,15 @@ export class UmlRelationshipShapeUtil extends ShapeUtil<any> {
     const { kind, fromMultiplicity, toMultiplicity, label } = shape.props;
     const middle = points[Math.floor((points.length - 1) / 2)]!;
     const next = points[Math.ceil((points.length - 1) / 2)]!;
-    return <SVGContainer style={{ overflow: 'visible', pointerEvents: 'none' }}>
+    return <svg className="tl-svg-container" style={{ overflow: 'visible', pointerEvents: 'none' }}>
       <polyline points={points.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="black" strokeDasharray={(kind === 'dependency' || kind === 'realization') ? '6 4' : undefined} />
       {(kind === 'aggregation' || kind === 'composition') && marker(start, points[1]!, kind)}
       {(kind === 'generalization' || kind === 'dependency' || kind === 'realization') && marker(end, points[points.length - 2]!, kind)}
       {fromMultiplicity && <text {...multiplicityPosition(start, shape.props.from)} fontSize="14">{fromMultiplicity}</text>}
       {toMultiplicity && <text {...multiplicityPosition(end, shape.props.to)} fontSize="14">{toMultiplicity}</text>}
       {label && <text x={(middle.x + next.x) / 2} y={(middle.y + next.y) / 2 - 8} fontSize="14" textAnchor="middle">{label}</text>}
-    </SVGContainer>;
+      <SvgMappingButton shape={shape} {...mappingRoutePosition(points)} />
+    </svg>;
   }
   override indicator(shape: any) { return <polyline points={this.points(shape).map((p) => `${p.x},${p.y}`).join(' ')} fill="none" />; }
 }

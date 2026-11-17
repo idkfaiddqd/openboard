@@ -11,3 +11,4 @@ import './dashboard.test.js';
 import './ui.test.js';
 
 import './assembly-diagram.test.js';
+import './ddd-mapping.test.js';
